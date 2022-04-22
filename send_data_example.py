@@ -56,7 +56,7 @@ def main(argv):
     """
     info = StreamInfo(name, type, n_channels, srate, 'float32', 'myuid34234')
     
-    # next make an outlet
+    # creating an outlet object
     outlet = StreamOutlet(info)
 
     print("now sending data...")
@@ -69,7 +69,7 @@ def main(argv):
         # this is how you decide the number of samples needed depending on the time elapsed.
         # is this because in streaming data sometimes you're in time, sometimes you're late and you need more samples???
         required_samples = int(srate * elapsed_time) - sent_samples
-            # srate*elapsed_time is the number of samples that should be sent in the elapsed time
+            # srate*elapsed_time is the number of samples that SHOULD HAVE BEEN sent in the elapsed time
             # you take away the samples that you already sent to get the ones you need to send.
             # each sample is a list of n_channels elements, one for each channel
         

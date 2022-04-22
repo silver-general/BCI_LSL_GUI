@@ -113,6 +113,7 @@ def main():
     # firstly resolve all streams that could be shown
     inlets: List[Inlet] = []
     print("looking for streams")
+    # create a list of all available streams. list of StreamInfo objects
     streams = pylsl.resolve_streams()
 
     # Create the pyqtgraph window
@@ -123,6 +124,7 @@ def main():
     # iterate over found streams, creating specialized inlet objects that will
     # handle plotting the data
     for info in streams:
+        # info is a StreamInfo object
         if info.type() == 'Markers':
             if info.nominal_srate() != pylsl.IRREGULAR_RATE \
                     or info.channel_format() != pylsl.cf_string:
