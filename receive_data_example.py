@@ -8,7 +8,7 @@ def main():
     print("looking for an EEG stream...")
     # create a list of streams?
     streams = resolve_stream('type', 'EEG',wait_time=1.0) # don't I need any other specifiers?
-
+    streams = resolve_stream()
     # create a new inlet to read from the stream
     inlet = StreamInlet(streams[0])
 

@@ -1,6 +1,9 @@
 """
 Example program to demonstrate how to send a multi-channel time series to LSL.
 from: https://github.com/labstreaminglayer/liblsl-Python/blob/master/pylsl/examples/SendData.py
+
+TO TRY THIS PROGRAM
+use any recording program like Labrecorder and find the outlet into the stream list. record an XML file and check metadata
 """
 import sys
 import getopt
@@ -12,7 +15,6 @@ from pylsl import StreamInfo, StreamOutlet, local_clock
 
 
 def main(argv):
-    input("press enter to start")
     srate = 100 # sampling rate?
     name = 'BioSemi'
     type = 'EEG'
@@ -24,7 +26,6 @@ def main(argv):
         opts, args = getopt.getopt(argv, "hs:c:n:t:", longopts=["srate=", "channels=", "name=", "type"])
     except getopt.GetoptError:
         print(help_string)
-        input("press enter to exit")
         sys.exit(2)
     for opt, arg in opts: 
         # opts is an iterable.
@@ -32,7 +33,6 @@ def main(argv):
         #   arg is the argument passed
         if opt == '-h': # in case user asked for help!
             print(help_string)
-            input("press enter to exit")
             sys.exit()
         elif opt in ("-s", "--srate"):
             srate = float(arg)
@@ -54,16 +54,18 @@ def main(argv):
         serial number of the device: or some other more or less locally unique identifier for the stream as far as available 
             you could also omit it but interrupted connections wouldn't auto-recover)
     """
-    info = StreamInfo(name, type, n_channels, srate, 'float32', 'myuid34234')
+    info = StreamInfo(name= name, type= type, channel_count= n_channels, nominal_srate= srate, channel_format= 'float32', source_id= 'myuid34234')
     
     # creating an outlet object
     outlet = StreamOutlet(info)
-
+    print("stream info:")
+    print("name: {}\ntype: {}\nn_channels: {}\nsrate: {}Hz\ndtype: {}\nID: {}\n".format(info.name(),info.type(),info.channel_count(),info.nominal_srate(),info.channel_format(),info.source_id()))
     print("now sending data...")
     start_time = local_clock()
     sent_samples = 0
     while True:
-        # update elapsed time. how much time has passed since the start of the program?
+
+       # update elapsed time. how much time has passed since the start of the program?
         elapsed_time = local_clock() - start_time
         
         # this is how you decide the number of samples needed depending on the time elapsed.
@@ -76,7 +78,7 @@ def main(argv):
         # for each of the required samples
         for sample_ix in range(required_samples):
             
-            # make a new sample of n_channels elements; 
+            # make a random new sample of n_channels elements; 
             # this is converted into a pylsl.vectorf (the data type that is expected by push_sample)
             mysample = [rand() for _ in range(n_channels)]            
             
@@ -89,8 +91,7 @@ def main(argv):
         # now send it and wait for a bit before trying again.
         time.sleep(0.01)
 
-    input("press enter to exit")
 
 if __name__ == '__main__':
-    main(sys.argv[1:])
-
+    #main(sys.argv[1:])
+    main(None) # if you want to play it in the itneractive window with default arguments
