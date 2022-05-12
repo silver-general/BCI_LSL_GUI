@@ -23,7 +23,7 @@ def main(argv):
     help_string = 'SendData.py -s <sampling_rate> -n <stream_name> -t <stream_type>'
     try:
         # NOTE: you can also run the program with default arguments!
-        opts, args = getopt.getopt(argv, "hs:c:n:t:", longopts=["srate=", "channels=", "name=", "type"])
+        opts, args = getopt.getopt(argv, shortopts="hs:c:n:t:", longopts=["srate=", "channels=", "name=", "type"])
     except getopt.GetoptError:
         print(help_string)
         sys.exit(2)
@@ -63,6 +63,7 @@ def main(argv):
     print("now sending data...")
     start_time = local_clock()
     sent_samples = 0
+
     while True:
 
        # update elapsed time. how much time has passed since the start of the program?
@@ -82,7 +83,7 @@ def main(argv):
             # this is converted into a pylsl.vectorf (the data type that is expected by push_sample)
             mysample = [rand() for _ in range(n_channels)]            
             
-            # now send it
+            # now push it into the buffer?
             outlet.push_sample(mysample)
 
         # update how many samples were sent. this will be used to compute how many samples are needed to be streamed

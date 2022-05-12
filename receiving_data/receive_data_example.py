@@ -17,17 +17,6 @@ def testing():
     here I'm just playing around
     """
 
-    def print_outlets(streams):
-        if len(streams)==0: print("no outlet found"); return 1
-        print("names of available outlets:")
-        for s in streams:
-            print ("\t-> "+s.name())
-        return 0
-    # using resolve_stream without any arguments
-        # runs resolve_streams() without arguments: looks for ALL outlets
-    streams = resolve_stream()
-    print_outlets(streams)
-
     # using resolve_streams with first argument string, second argument string
         # this runs resolve_by_prop with the two string arguments
         # NOTE: timeout is forever by default, and you can't change it from here! QUESTION: how to?
@@ -47,55 +36,6 @@ def testing():
     inlet = StreamInlet(info= streams[0], max_buflen=360, max_chunklen=0, recover=True)
 
     sample, timestamp = inlet.pull_sample()
-
-"""
-defining some useful functions
-"""
-
-def print_streams_info(streams):
-    for i in range(len(streams)):
-        print(  "outlet {}"             .format(i)                                  )
-        print(  "\tname:\t\t{}"         .format(streams[i].name())                  )
-        print(  "\ttype:\t\t{}"         .format(streams[i].type())                  ) 
-        print(  "\t#_channels:\t{}"     .format(streams[i].channel_count())         )
-        print(  "\ts_rate:\t\t{}"       .format(streams[i].nominal_srate())         )
-        print(  "\tdtype:\t\t{}"        .format(streams[i].channel_format())        )
-        print(  "\tID:\t\t{}"           .format(streams[i].source_id())                                                )
-
-def find_available_streams(return_all=True):
-    # search for all outlets
-    print("finding available outlets...\n")
-    streams = resolve_stream()
-    print_streams_info(streams)
-
-    if return_all==True:
-        print("all streams selected")
-        return streams 
-
-    else: 
-        selection = select_stream(streams)
-        new_list = []
-        # return only selected elements
-        for i in range(len(selection)):
-            new_list.append( streams[i] )
-        return new_list
-
-def select_stream(streams):
-    """..."""
-    stream_list = []
-    while True:
-        choice = int(input("select positive number, or -1 if you're done"))
-        if choice == -1:
-            break 
-        else: stream_list.append(streams[choice])
-    return stream_list 
-
-streams = find_available_streams(return_all=False)
-
-print("selected streams: ")
-print_streams_info(streams)
-
-
 
 
 

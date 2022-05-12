@@ -1,10 +1,13 @@
 from pylsl import StreamInlet, resolve_stream, resolve_byprop, local_clock
 
-"""
-defining some useful functions
-"""
 
+"""
+helper functions from receiving data functions
+"""
 def print_streams_info(streams):
+    """
+    prints the StreamInfo information of a list of outlets
+    """
     for i in range(len(streams)):
         print(  "outlet {}"             .format(i)                                  )
         print(  "\tname:\t\t{}"         .format(streams[i].name())                  )
@@ -15,6 +18,11 @@ def print_streams_info(streams):
         print(  "\tID:\t\t{}"           .format(streams[i].source_id())                                                )
 
 def find_available_streams(return_all=True):
+    """
+    finds all streams. 
+    INPUT
+        return_all: true of you want to find all, otherwhise you can select them
+    """
     # search for all outlets
     print("finding available outlets...\n")
     streams = resolve_stream()
@@ -37,7 +45,7 @@ def find_available_streams(return_all=True):
         return new_list
 
 def select_stream(streams):
-    """select only one!"""
+    """selects only one!"""
     stream_list = []
     while True:
         choice = int(input("select positive number, or -1 if you're done"))
@@ -48,20 +56,64 @@ def select_stream(streams):
             break
     return stream_list 
 
-# try that
-streams = find_available_streams(return_all=True)
-
-print("selected streams: ")
-print_streams_info(streams)
-
-
 
 """
-creating an inlet object
+function that plots samples
+
+use spammer.py to send some values
 """
 
-inlet = StreamInlet(info= streams[0], max_buflen=360, max_chunklen=0, recover=True)
+def receiver(stream,T):
+    """
+    received data for a while
+    INPUT
+        stream: stramInfo object
+        T: time to receive
+    """
+
+    data = []
+
+    # create inlet
+    inlet = StreamInlet(info=stream, max_buflen=360, max_chunklen=0, recover=True)
+
+    sample_number = 0
+
+    # open streaming session. data will be buffered I guess? so this is probably why I get more samples!
+    #inlet.open_stream()
+
+    # define start time
+    start_time = local_clock()
+
+    while True:
+        
+        if local_clock()-start_time > T:
+            break
+        
+        # timeout forever means it will wait until a sample is available!
+        sample = inlet.pull_sample(timeout=10, sample=None)
+        #print(sample)
+        data.append(sample)
+        sample_number += 1
 
 
 
+    inlet.close_stream()
+    elapsed = local_clock() - start_time
 
+    print("sampling rate of outlet: {} Hz".format( inlet.info().nominal_srate() ))
+    print("samples received: {}".format(sample_number) )
+    print("elapsed time: {}".format(elapsed))
+
+    return data
+
+# find and select stream
+streams = find_available_streams()
+info = streams[int(input("select stream number"))]
+
+data = receiver(info,4)
+
+"""
+QUESTION: WHY DO I GET ONE SAMPLE MORE? 
+"""
+for i in data:
+    print(i)
