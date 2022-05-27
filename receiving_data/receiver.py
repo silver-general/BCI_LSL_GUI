@@ -15,7 +15,7 @@ def print_streams_info(streams):
         print(  "\t#_channels:\t{}"     .format(streams[i].channel_count())         )
         print(  "\ts_rate:\t\t{}"       .format(streams[i].nominal_srate())         )
         print(  "\tdtype:\t\t{}"        .format(streams[i].channel_format())        )
-        print(  "\tID:\t\t{}"           .format(streams[i].source_id())                                                )
+        print(  "\tID:\t\t{}"           .format(streams[i].source_id())             )
 
 def find_available_streams(return_all=True):
     """
@@ -90,7 +90,8 @@ def receiver(stream,T):
             break
         
         # timeout forever means it will wait until a sample is available!
-        sample = inlet.pull_sample(timeout=10, sample=None)
+        sample = inlet.pull_sample(timeout=100, sample=None)
+        
         #print(sample)
         data.append(sample)
         sample_number += 1
@@ -110,7 +111,7 @@ def receiver(stream,T):
 streams = find_available_streams()
 info = streams[int(input("select stream number"))]
 
-data = receiver(info,4)
+data = receiver(info,2)
 
 """
 QUESTION: WHY DO I GET ONE SAMPLE MORE? 

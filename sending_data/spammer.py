@@ -14,7 +14,7 @@ from pylsl import StreamInfo, StreamOutlet, local_clock
 def main(argv):
     
     # define default parameters for the outlet StreamInfo data
-    srate = 5 
+    srate = 250 
     name = 'spam_stream'
     type = 'spam'
     n_channels = 1

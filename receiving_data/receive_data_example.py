@@ -20,7 +20,7 @@ def testing():
     # using resolve_streams with first argument string, second argument string
         # this runs resolve_by_prop with the two string arguments
         # NOTE: timeout is forever by default, and you can't change it from here! QUESTION: how to?
-    streams = resolve_stream('type', 'EEG') 
+    streams = resolve_stream('type', 'EEG')  #
     print(streams)
 
     # find streams using resolve_byprop directly
