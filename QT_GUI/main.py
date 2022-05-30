@@ -1,20 +1,21 @@
 """
-using parts of
-media player: https://doc.qt.io/qtforpython/examples/example_multimedia__player.html
-
-creating the main window
-    https://doc.qt.io/qtforpython/PySide6/QtWidgets/QMainWindow.html
 
 """
 
 import sys
 
-from PySide6.QtCore import QStandardPaths, Qt, Slot
+from pylsl import StreamInlet, resolve_stream, resolve_byprop, local_clock
 
-from PySide6.QtGui import QAction, QIcon, QKeySequence, QScreen
+from PySide6.QtCore import QStandardPaths, Qt
 
-from PySide6.QtWidgets import (QApplication, QDialog, QFileDialog, QMainWindow, QSlider, QStyle, QToolBar)
-from PySide6.QtWidgets import QPushButton
+from PySide6.QtGui import QAction, QIcon
+
+from PySide6.QtWidgets import (
+                                QApplication, QMainWindow, QHBoxLayout, QVBoxLayout, QWidget,
+                                QToolBar, QStatusBar,
+                                QLabel, QPushButton, QListWidget
+                                )
+
 
 
 class MainWindow(QMainWindow):
@@ -22,71 +23,132 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        tool_bar = QToolBar()
-        self.addToolBar(tool_bar)
+        self.setWindowTitle("A LSL-based GUI")
 
-        file_menu = self.menuBar().addMenu("&File")
+        """
+        ATTRIBUTES
+        """
+        self.streams = [] # list of available StreamInfo objects holding metadata for LSL stream outlets
 
-        icon = QIcon.fromTheme("document-open")
-        open_action = QAction(icon, "&Open...", self, shortcut=QKeySequence.Open, triggered=self.open)
-        
-        file_menu.addAction(open_action)
-        tool_bar.addAction(open_action)
-        
-        icon = QIcon.fromTheme("application-exit")
-        
-        exit_action = QAction(icon, "E&xit", self,
-                              shortcut="Ctrl+Q", triggered=self.close)
-        
+
+        """
+        STATUS BAR
+            QStatusBar
+            .setStatusBar run from main window
+            displays status
+            settings:
+                ...
+        """
+        status = QStatusBar(self)
+        self.setStatusBar(status)
+
+        """
+        PERSISTENT WINDOWS
+            MAYBE? stream list: always keep it in case you wanna see it
+        """
+        ...
+
+
+        """
+        MENU
+        """
+        menu = self.menuBar()
+
+        file_menu = menu.addMenu("File")
+        file_menu.addSeparator()
+
+        """add something to the file menu, like an exit option (an action)"""
+        exit_action = QAction(QIcon.fromTheme("application-exit"),"Quit", self) # first, define an action  
+        exit_action.triggered.connect(self.exit_action_called)      
         file_menu.addAction(exit_action)
 
-        about_menu = self.menuBar().addMenu("&About")
 
-        about_qt_act = QAction("About &Qt", self, triggered=qApp.aboutQt)
-        about_menu.addAction(about_qt_act)
+        """
+        LAYOUT
+        """
+        # first, setup elements
+        self.label = QLabel("available streams (update with button below): ")
+        
+        self.stream_list = QListWidget()
+        
+        self.resolver = QPushButton("Update available streams")
+        self.resolver.clicked.connect(self.find_available_streams)
 
-        self._mime_types = []
+        layout = QVBoxLayout()
+        layout.addWidget(self.label)
+        layout.addWidget(self.stream_list)
+        layout.addWidget(self.resolver)
 
-    def closeEvent(self, event):
-        self._ensure_stopped()
-        event.accept()
+        dummy = QWidget()
+        dummy.setLayout(layout)
 
-    @Slot()
-    def open(self):
-        self._ensure_stopped()
-        file_dialog = QFileDialog(self)
+        self.setCentralWidget(dummy)
 
-        is_windows = sys.platform == 'win32'
-        if not self._mime_types:
-            self._mime_types = get_supported_mime_types()
-            if (is_windows and AVI not in self._mime_types):
-                self._mime_types.append(AVI)
-            elif MP4 not in self._mime_types:
-                self._mime_types.append(MP4)
 
-        file_dialog.setMimeTypeFilters(self._mime_types)
 
-        default_mimetype = AVI if is_windows else MP4
-        if default_mimetype in self._mime_types:
-            file_dialog.selectMimeTypeFilter(default_mimetype)
+    def exit_action_called(self):
+        self.exit()
 
-        movies_location = QStandardPaths.writableLocation(QStandardPaths.MoviesLocation)
-        file_dialog.setDirectory(movies_location)
-        if file_dialog.exec() == QDialog.Accepted:
-            url = file_dialog.selectedUrls()[0]
-            self._playlist.append(url)
-            self._playlist_index = len(self._playlist) - 1
-            self._player.setSource(url)
-            self._player.play()
+
+    """
+    LSL RELATED THINGS
+    """
+
+
+    def find_available_streams(self):
+        """
+        finds all streams. 
+        """
+        print("finding available outlets...\n")
+        streams = resolve_stream()
+        ##print_streams_info(streams)
+
+        if len(streams)==0:
+            print("no outlets found!")
+            # update streamInfo objects list
+            self.streams = []
+            # update QListWidget elements
+            self.stream_list.clear()
+            self.stream_list.addItem("no outlets found!")
+
+
+        else:
+            print("all stream outlets selected")
+
+            # update list of StreamInfo metadata
+            self.streams = streams
+            
+            # update QListWidget: delete old entries and add new ones
+            self.stream_list.clear()
+            for outlet in streams:
+                self.stream_list.addItem(outlet.name())
+
+            # print in terminal
+            self.print_stream_info(self.streams)
+
+
+    def print_stream_info(self, streams):
+        """
+        prints the StreamInfo information of a list of outlets
+        NOTE: DECIDE IF YOU WANT THIS TO BE A METHOD OR STANDALONE FUNCTION!
+        """
+        for i in range(len(streams)):
+            print(  "outlet {}"             .format(i)                                  )
+            print(  "\tname:\t\t{}"         .format(streams[i].name())                  )
+            print(  "\ttype:\t\t{}"         .format(streams[i].type())                  ) 
+            print(  "\t#_channels:\t{}"     .format(streams[i].channel_count())         )
+            print(  "\ts_rate:\t\t{}"       .format(streams[i].nominal_srate())         )
+            print(  "\tdtype:\t\t{}"        .format(streams[i].channel_format())        )
+            print(  "\tID:\t\t{}"           .format(streams[i].source_id())             )
+
 
 
 if __name__ == '__main__':
 
-    # instantiate Qapplication object
     app = QApplication(sys.argv)
-    # create a main window 
+
     main_win = MainWindow()
-    available_geometry = main_win.screen().availableGeometry()
-    main_win.resize(available_geometry.width() / 3, available_geometry.height() / 2)
+
     main_win.show()
+
     sys.exit(app.exec())
