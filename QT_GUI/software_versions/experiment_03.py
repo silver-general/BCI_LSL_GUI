@@ -4,6 +4,11 @@ VERSION 2
 NOW I HAVE A LAYOUT WITH CENTRAL WIDGET
     dividen in 2
         left: vertical bar with writings "select stream", "select patient data", "select experiment type"
+
+QUESTION:
+    need to setup how the windows are closed. right now I can close the main window and the others stay there! I need to avoid closing the main window before the others!
+
+QUESTION: FIXME: when a stream is deselected and no others are selected, old metadata stays in the label display!
 """
 
 
@@ -107,6 +112,8 @@ class ExperimentSetupWindow(QWidget):
         
         self.experiment_info = {"Experiment Type" : "No experiment selected"} # QUESTION: sshould I even use those? i can directly update the main window metadata!
         self.MI_parameters = {}
+        self.MI_classes = [] 
+        self.MI_sequence = [] # list of indices relative to the MI classes. randomised sequence of those
         self.SSVEP_parameters = {}
 
         self.accept_selection = QPushButton("Accept Selection")
@@ -176,6 +183,59 @@ class ExperimentSetupWindow(QWidget):
         print(self.experiment_type.currentIndex())
         print(self.experiment_type.currentText())
 
+class PatientDataWindow(QWidget):
+    """
+    editable labels with possibility of adding more info about a patient through an "add" and "remove" buttons
+    """        
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Patient Data Setting")
+        
+        self.layout = QVBoxLayout()
+        self.accept_settings = QPushButton("Accept settings")
+        self.close_settings = QPushButton("Close")
+        self.close_settings.clicked.connect(self.close)
+
+        self.name = QLineEdit("") # QUESTION: HOW TO I CREATE AN INTERACTIVE "insert new form" ??
+        self.surname = QLineEdit("") 
+        self.birthday = QLineEdit("") 
+        self.EEG_technician = QLineEdit("") 
+
+        self.patient_data_form = QFormLayout()
+        self.patient_data_form.addRow("Name", self.name)
+        self.patient_data_form.addRow("Surname",self.surname)
+        self.patient_data_form.addRow("Date of Birth",self.birthday)
+        self.patient_data_form.addRow("EEG technician", self.EEG_technician)
+
+        self.layout.addLayout(self.patient_data_form)
+
+        self.layout.addWidget(self.accept_settings)
+        self.layout.addWidget(self.close_settings)
+
+        self.setLayout(self.layout)
+    
+    def add_row_to_form(self):
+        """
+        adds another row
+        """
+        ...
+
+class ApproveExperimentWindow(QWidget):
+    """
+    open this with self.show_approve_experiment_window() method
+    QUESTION: this is only for motion imagery. later find a way of differentiating for SSVEP and others!
+    """
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Approve Experiment Window")
+
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        self.metadata_label = QLabel("StreamInfo complete with all metadata (can I generate timestamps already? or get a button to do so?") 
+            # NOTE: text is set when main window updates the etadata. is that okay? I'll append things to the StreamInfo object there. QUESTION
+        self.layout.addWidget(self.metadata_label)
 
 class MainWindow(QMainWindow):
 
@@ -194,11 +254,10 @@ class MainWindow(QMainWindow):
         self.patient_data = {} # this will hold the outlet metadata as well as additional features like the motor imagery timing and patient data
         self.experiment_info = {"Experiment Type" : "No experiment selected"}
 
+
         """
         PERSISTENT WINDOWS
         """
-        ##self.stream_selection_window = StreamSelectionWindow()
-        ##self.MI_settings_window = MotionImagerySettingWindow()
 
         self.stream_selection = StreamSelectionWindow()
         self.stream_selection.accept.clicked.connect(self.set_stream) # this is the magic: connect a button from the child window to a method in the parent window!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -206,6 +265,11 @@ class MainWindow(QMainWindow):
 
         self.experiment_setup_window = ExperimentSetupWindow()
         self.experiment_setup_window.accept_selection.clicked.connect(self.set_experiment_type)
+
+        self.approve_experiment_window = ApproveExperimentWindow()
+
+        self.patient_data_window = PatientDataWindow()
+        self.patient_data_window.accept_settings.clicked.connect(self.accept_patient_data)
 
 
         """
@@ -216,6 +280,7 @@ class MainWindow(QMainWindow):
             settings:
                 ...
         """
+
         status = QStatusBar(self)
         self.setStatusBar(status)
 
@@ -223,6 +288,7 @@ class MainWindow(QMainWindow):
         """
         MENU
         """
+
         menu = self.menuBar()
 
         file_menu = menu.addMenu("File")
@@ -246,28 +312,35 @@ class MainWindow(QMainWindow):
 
         experiment_menu = tools_menu.addMenu("Experiment setup")
 
-        MI_action = QAction("Motion Imagery Settings",self)
+        MI_action = QAction("Motion Imagery Settings",self) # this is not used! remove and remove the menu item that references this!
         ##MI_action.triggered.connect(self.open_MI_setting_window)
-        
         experiment_menu.addAction(MI_action)
 
         view_menu = menu.addMenu("View")
         ### view_menu.addAction()
 
+
         """
         WIDGETS: main window commands
         """
-        # buttons that select the steps of setting up the experiment
-        self.button1 = QPushButton("Select stream")
-        self.button1.clicked.connect(self.show_stream_selection)
 
-        self.button2 = QPushButton("Select experiment")
-        self.button2.clicked.connect(self.show_experiment_setup_window)
+        # BUTTONS! 
 
-        self.button3 = QPushButton("View visual representation\n(don't do this for now)")
+        self.stream_selection_button = QPushButton("Select stream")
+        self.stream_selection_button.clicked.connect(self.show_stream_selection)
+
+        self.experiment_selection_button = QPushButton("Select experiment")
+        self.experiment_selection_button.clicked.connect(self.show_experiment_setup_window)
+
+        #### NOTE YET AVAILABLE: ASK CIHAND FOR MORE INFP
+        ### self.button3 = QPushButton("View visual representation\n(don't do this for now)")
         
-        self.button4 = QPushButton("View metadata and approve experiment")
+        self.view_metadata_and_run_experiment_button = QPushButton("View metadata and approve experiment")
+        self.view_metadata_and_run_experiment_button.clicked.connect(self.show_approve_experiment_window)
         
+        self.patient_data_button = QPushButton("Insert Patient Data")
+        self.patient_data_button.clicked.connect(self.show_patient_data_window)
+
         self.central_label = QLabel("Info displayed here")
         self.right_label = QLabel("metadata info displayed here")
         self.update_info = QPushButton("Update metadata info") # NOTE: this should be done automatically. perhaps with a function that takes all metadata and puts it together?
@@ -295,10 +368,14 @@ class MainWindow(QMainWindow):
         self.layout02.addWidget(self.update_metadata_button)
 
 
-        self.layout01.addWidget(self.button1)   
-        self.layout01.addWidget(self.button2)
+        self.layout01.addWidget(self.stream_selection_button)   
+        self.layout01.addWidget(self.experiment_selection_button)
+
         # self.layout01.addWidget(self.button3) not yet time to implement button 3
-        self.layout01.addWidget(self.button4)
+
+        self.layout01.addWidget(self.patient_data_button)
+
+        self.layout01.addWidget(self.view_metadata_and_run_experiment_button)
 
         self.layout00.addLayout(self.layout01)
 
@@ -308,7 +385,6 @@ class MainWindow(QMainWindow):
         dummy = QWidget()
         dummy.setLayout(self.layout00)
         self.setCentralWidget(dummy)
-
 
     def exit_action_called(self):
         self.exit()
@@ -348,6 +424,7 @@ class MainWindow(QMainWindow):
             self.experiment_setup_window.show()
 
     def set_experiment_type(self):
+
         # updates metadata on experiment type
         text = self.experiment_setup_window.page_combo.currentText()
         self.experiment_info["Experiment Type"] = text # update main window metadata
@@ -376,11 +453,12 @@ class MainWindow(QMainWindow):
             print("\tRuns per class:\t\t" + text) 
 
 
-        self.update_metadata() # instead of using the update button
+        self.update_metadata() # this updates the label, not the StreamInfo!
         
-
     def update_metadata(self):
-
+        """
+        this only updates the label in the main window displaying the metadata. the metadata itself (as dictionary) is created into "self.set_experiment_type()"
+        """
         text = "Streaming info\n"
         if type(self.stream_info) == StreamInfo:
             text = text + "\tOutlet name\t{}\n\ttype:\t\t{}\n\tchannels\t\t{}\n\tsrate\t\t{}\n\tformat\t\t{}\n\tsource id\t{}".format(self.stream_info.name() , self.stream_info.type() , self.stream_info.channel_count(), self.stream_info.nominal_srate(), self.stream_info.channel_format(), self.stream_info.source_id())
@@ -400,6 +478,24 @@ class MainWindow(QMainWindow):
 
         text
         self.right_label.setText(text)
+
+    def show_approve_experiment_window(self):
+        if self.approve_experiment_window.isVisible():
+            pass
+        else:
+            self.approve_experiment_window.show()
+
+    def show_patient_data_window(self):
+        if self.patient_data_window.isVisible():
+            pass 
+        else:
+            self.patient_data_window.show()
+
+    def accept_patient_data(self):
+        """
+        here you accept sna dsave to metadata all patient settings found in the form
+        """
+        print("Accepting the following patient data:")
 
 
 
