@@ -139,7 +139,7 @@ class ExperimentSetupWindow(QWidget):
 
         self.stackedLayout.addWidget(self.page0)
 
-        # Create the second page
+        # Create the SECOND PAGE: MOTION IMAGERY
         self.page1 = QWidget()
 
         self.page1Layout = QFormLayout()
@@ -152,6 +152,8 @@ class ExperimentSetupWindow(QWidget):
         self.page1Layout.addRow("Stimulus duration:", self.stimulus_duration)
         self.page1Layout.addRow("Rest time", self.rest_time)
         self.page1Layout.addRow("Number of runs per stimulus", self.runs_per_class)
+
+        self.
 
         self.page1.setLayout(self.page1Layout)
 
@@ -193,20 +195,22 @@ class PatientDataWindow(QWidget):
         self.setWindowTitle("Patient Data Setting")
         
         self.layout = QVBoxLayout()
+
         self.accept_settings = QPushButton("Accept settings")
+
         self.close_settings = QPushButton("Close")
         self.close_settings.clicked.connect(self.close)
 
         self.name = QLineEdit("") # QUESTION: HOW TO I CREATE AN INTERACTIVE "insert new form" ??
         self.surname = QLineEdit("") 
         self.birthday = QLineEdit("") 
-        self.EEG_technician = QLineEdit("") 
+        ##self.EEG_technician = QLineEdit("") NOTE: NOT A PATIENT THING!
 
         self.patient_data_form = QFormLayout()
         self.patient_data_form.addRow("Name", self.name)
         self.patient_data_form.addRow("Surname",self.surname)
         self.patient_data_form.addRow("Date of Birth",self.birthday)
-        self.patient_data_form.addRow("EEG technician", self.EEG_technician)
+        ##self.patient_data_form.addRow("EEG technician", self.EEG_technician) NOTE: NOT A PATIENT THING!
 
         self.layout.addLayout(self.patient_data_form)
 
@@ -252,7 +256,12 @@ class MainWindow(QMainWindow):
         self.selected_stream = 0 # reference to the selected stream in self.stream_info list
 
         self.patient_data = {} # this will hold the outlet metadata as well as additional features like the motor imagery timing and patient data
+        
         self.experiment_info = {"Experiment Type" : "No experiment selected"}
+
+        # METADATA: final XDF file
+        self.metadata = None
+        
 
 
         """
@@ -475,9 +484,13 @@ class MainWindow(QMainWindow):
         if self.experiment_info["Experiment Type"] == "Motion Imagery":
             text = text + "\nExperiment Parameters\n\tStimulus Duration\t\t{}\n\tRest Time:\t\t{}\n\tRuns per Class\t\t{}".format( self.experiment_setup_window.stimulus_duration.text(), self.experiment_setup_window.rest_time.text(), self.experiment_setup_window.runs_per_class.text() )
 
+        if bool(self.patient_data):
+            text = text + "\nPatient data\n\tname\t\t{}\n\tsurname\t\t{}\n\tDate of Birth\t{}".format( self.patient_data["Name"], self.patient_data["Surname"], self.patient_data["Date of Birth"] )
 
-        text
         self.right_label.setText(text)
+
+        # update metadata in the StreamInfo object so that you'll have an XML file there
+        
 
     def show_approve_experiment_window(self):
         if self.approve_experiment_window.isVisible():
@@ -496,6 +509,14 @@ class MainWindow(QMainWindow):
         here you accept sna dsave to metadata all patient settings found in the form
         """
         print("Accepting the following patient data:")
+        print(self.patient_data_window.name.text())
+
+        self.patient_data["Name"] = self.patient_data_window.name.text()
+        self.patient_data["Surname"] = self.patient_data_window.surname.text()
+        self.patient_data["Date of Birth"] = self.patient_data_window.birthday.text()
+
+        self.update_metadata()
+        
 
 
 
