@@ -128,10 +128,13 @@ class MainWindow(QMainWindow):
             remove all items:
                 .clear()
             get current item index:
-                .currentItem() returns a QListWidgetItem https://doc.qt.io/qtforpython/PySide6/QtWidgets/QListWidgetItem.html#PySide6.QtWidgets.PySide6.QtWidgets.QListWidgetItem.text
-                to get the text, go for QListWidgetItem.text()
-                    basicall: .currentItem().text()
-
+                to get the INDEX: https://doc.qt.io/qtforpython/PySide6/QtWidgets/QListWidget.html#PySide6.QtWidgets.PySide6.QtWidgets.QListWidget.currentRow
+                
+                in addition
+                    .currentItem() returns a QListWidgetItem https://doc.qt.io/qtforpython/PySide6/QtWidgets/QListWidgetItem.html#PySide6.QtWidgets.PySide6.QtWidgets.QListWidgetItem.text
+                    to get the text, go for QListWidgetItem.text()
+                        basicall: .currentItem().text()
+               
             signals:
                 currentItemChanged signal which sends the QListItem (!!!)
                 currentTextChanged signal which sends the text

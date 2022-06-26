@@ -89,14 +89,20 @@ class MainWindow(QMainWindow):
         NESTING LAYOUTS
         
             let's try to have an horizontal layout of 3, with the second widget containing a layout of 3 vertical widgets!
+            You can 
+                set the spacing around the layout using .setContentMargins or 
+                set the spacing between elements using .setSpacing.
+
         """
         # inner layout: vertial, 3 widgets
         layout_01 = QVBoxLayout()
+        layout_01.setSpacing(10)
         layout_01.addWidget(Color("red"))
         layout_01.addWidget(Color("green"))
         layout_01.addWidget(Color("blue"))
         # NOTE: dummy for the inner layout: no need, just add internal layout to external layout!
         
+
         layout_00 = QHBoxLayout()
         layout_00.addWidget(Color("purple"))
         layout_00.addLayout(layout_01) # same NOTE: dummy for the inner layout: no need, just add internal layout to external layout!

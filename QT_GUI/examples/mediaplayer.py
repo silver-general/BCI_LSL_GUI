@@ -40,6 +40,8 @@ class MainWindow(QMainWindow):
 
         self._player.errorOccurred.connect(self._player_error)
 
+
+        # create toolbar
         tool_bar = QToolBar()
         self.addToolBar(tool_bar)
 
@@ -121,9 +123,10 @@ class MainWindow(QMainWindow):
     # USE THIS FOR UPLOADING FILES!
     @Slot()
     def open(self):
-        self._ensure_stopped()
-        file_dialog = QFileDialog(self)
+        self._ensure_stopped() # check playback was stopped
+        file_dialog = QFileDialog(self) # opens a DIALOG
 
+        # checks supported types
         is_windows = sys.platform == 'win32'
         if not self._mime_types:
             self._mime_types = get_supported_mime_types()
@@ -195,3 +198,5 @@ if __name__ == '__main__':
                     available_geometry.height() / 2)
     main_win.show()
     sys.exit(app.exec())
+
+

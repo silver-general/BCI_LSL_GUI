@@ -11,7 +11,7 @@ from random import random as rand
 from pylsl import StreamInfo, StreamOutlet, local_clock
 
 
-def main(argv):
+def main():
     
     # define default parameters for the outlet StreamInfo data
     srate = 10 
@@ -19,29 +19,6 @@ def main(argv):
     type = 'spam'
     n_channels = 1
 
-    # define the error message sent if arguments are not valid
-    help_string = 'spammer.py -s <sampling_rate> -n <stream_name> -t <stream_type>'
-    try:
-        # NOTE: you can also run the program with default arguments!
-        opts, args = getopt.getopt(argv, "hs:c:n:t:", longopts=["srate=", "channels=", "name=", "type"])
-    except getopt.GetoptError:
-        print(help_string)
-        sys.exit(2)
-    for opt, arg in opts: 
-        # opts is an iterable.
-        #   opt is the i-th option. can be short or long, eg: -s or --srate
-        #   arg is the argument passed
-        if opt == '-h': # in case user asked for help!
-            print(help_string)
-            sys.exit()
-        elif opt in ("-s", "--srate"):
-            srate = float(arg)
-        elif opt in ("-c", "--channels"):
-            n_channels = int(arg)
-        elif opt in ("-n", "--name"):
-            name = arg
-        elif opt in ("-t", "--type"):
-            type = arg
 
     # create info for your stream
     info = StreamInfo(name= name, type= type, channel_count= n_channels, nominal_srate= srate, channel_format= 'float32', source_id= 'myuid34234')
@@ -78,7 +55,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    main(None)
+    main()
 
 
 

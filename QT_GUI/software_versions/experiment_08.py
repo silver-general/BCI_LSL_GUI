@@ -11,9 +11,9 @@ from PySide6.QtGui import QAction, QIcon
 from PySide6.QtWidgets import (
                                 QApplication, QMainWindow, 
                                 QHBoxLayout, QVBoxLayout, QStackedLayout, QFormLayout, QGridLayout, 
-                                QWidget, QDialog, QFileDialog,
+                                QWidget, QDialog, QFileDialog, QDialogButtonBox,
                                 QToolBar, QStatusBar,
-                                QLabel, QLineEdit, QPushButton, QListWidget, QTreeWidget, QComboBox
+                                QLabel, QLineEdit, QPushButton, QListWidget, QTreeWidget, QComboBox, QListWidget, QTextEdit
                                 )
 
 
@@ -90,152 +90,148 @@ class StreamSelectionWindow(QWidget):
             print(  "\tID:\t\t{}"           .format(streams[i].source_id())             )
 
 
-class StimulusWidget(QWidget):
 
-    def __init__(self, widget_number):
+class Stimulus():
+    def __init__(self, stimulus_number):
+        #super().__init__()
+        self.stimulus_number = stimulus_number
+        self.description = {"picture path" : "", "audio path" : "", "audio cue path" : ""} # TODO add, "stimulus duration" : "0"} 
+        self.data_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'example_data'))
+        print("setting path for stimuli data: {}".format(self.data_path))
+
+    # NOTE I cannot access this from the ExperimentSetup window, the opening file dialog complains it receives no arguments! why?
+        
+class EditStimulus(QDialog):
+    
+    def __init__(self, number, stimulus):
         super().__init__()
 
-        # store name of selected stimulus
-        self.description = {"picture path" : "", "audio path" : ""} # QUESTION: better to use a dictionary here TODO: use only this
-        self.picture_path = ""
-        self.audio_path = ""
-        self.audio_cue_path = ""
-        self.stimulus_duration = None # NOTE: should I implement different times for each stimulus? later in the future
+        # hold the uploaded data into this dictionary, copy it into the widget object when approved
+        self.description = stimulus.description # use this to modify paths and print them
+        self.number = number
+        self.newdescription = self.description.copy()
 
-        # data path for finding stimuli
         self.data_path = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'example_data'))
-        print("setting path for stimuli data: ", self.data_path)
+
+        self.setWindowTitle("Editing stimulus {}".format(self.number))
 
 
-        """
-        LAYOUT
-            each widget is a row that starts as a simple button "add stimulus"
-            when the button is pressed, it becomed a row of widgets with
-                delete widget button
-                file name label
-                open picture file button (open the file dialog)
-                audio name label
-                open audio file button (open the file dialog) 
-                    NOTE: if you want to use an auditory stimulus, use this field as well
+        # outer layout: contains a list widget, and buttons
+        layout = QVBoxLayout()
+        self.setLayout(layout)
 
-        """
+        # add scrollable text edit, non editable
+        self.info_text = QTextEdit()
+        self.info_text.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.info_text.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.info_text.setReadOnly(True)
+        self.update_info_text()
+        layout.addWidget(self.info_text)
 
-        self.widget_number = widget_number
+        # add layout with buttons: add image, add audio, add audio cue, clear all
+        button_grid = QGridLayout()
 
-        self.picture_label = QLabel("Stimulus Image:")
-        self.picture_name = QLabel("...")
-        self.browse_image_button = QPushButton("Upload Image")
-        self.browse_image_button.clicked.connect(self.browse_image_button_clicked)
+        picture_upload_b = QPushButton("Upload picture")
+        picture_upload_b.clicked.connect( self.upload_image_button_clicked )    
+        audio_upload_b = QPushButton("Upload audio")
+        audio_upload_b.clicked.connect(self.upload_audio_button_clicked)
+        audio_cue_upload_b = QPushButton("Upload audio cue")
+        audio_cue_upload_b.clicked.connect(self.upload_audio_cue_button_clicked)
+        clear_data_b = QPushButton("Clear data")
+        clear_data_b.clicked.connect(self.clear_stimulus_data)
+
+        button_grid.addWidget( picture_upload_b, 0,0 )
+        button_grid.addWidget( audio_upload_b, 0,1 )
+        button_grid.addWidget( audio_cue_upload_b, 1,0 )
+        button_grid.addWidget( clear_data_b, 1,1 )
+
+
+        # QDialogButtonBox: line of buttons, automatically ordered!
+        buttons = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        self.buttonBox = QDialogButtonBox(buttons)
+        # signals: they come from the default buttons you inserted! and you connect the the default accept and reject methods of a QDialog!
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
+
+        layout.addLayout(button_grid)
+        layout.addWidget(self.buttonBox)
+
+
+        """ MOTOR IMAGERY UPLOADING STIMULI FUNCTIONS """
         
-        self.audio_label = QLabel("Stimulus Audio:")
-        self.audio_name = QLabel("...")
-        self.browse_audio_button = QPushButton("Upload Audio")
-        self.browse_audio_button.clicked.connect(self.browse_audio_button_clicked)
+    def get_info(self):
+        return self.newdescription # returns uploaded things
 
-        self.audio_cue_label = QLabel("Audio cue before this stimulus")
-        self.audio_cue_name = QLabel("...")
-        self.browse_audio_cue_button = QPushButton("Upload Audio Cue")
-        self.browse_audio_cue_button.clicked.connect(self.browse_audio_cue_button_clicked)
+    def update_info_text(self):
+        text = ""
 
-        self.clear_button = QPushButton("Clear stimulus {} data".format(self.widget_number))
-        self.clear_button.clicked.connect( self.clear_stimulus_data )
+        for key in self.newdescription.keys():
+            text = text + "{}\t\t{}\n".format(key, self.newdescription[key].split("/")[-1])
 
+        self.info_text.setText(text)
 
-        """ 
-        using a GRID LAYOUT 
-        """
+    def upload_image_button_clicked(self):
         
-        self.grid = QGridLayout()
-
-        self.grid.addWidget( QLabel("Stimulus {}".format(widget_number)), 0, 0 )
-        self.grid.addWidget( self.picture_label, 1,2 )
-        self.grid.addWidget( self.picture_name, 1,3 )
-        self.grid.addWidget( self.browse_image_button, 1,4)
-
-        self.grid.addWidget( self.audio_label, 2,2 )
-        self.grid.addWidget( self.audio_name, 2,3 )
-        self.grid.addWidget( self.browse_audio_button, 2,4 )
-
-        self.grid.addWidget( self.audio_cue_label, 3,2 )
-        self.grid.addWidget( self.audio_cue_name, 3,3 )
-        self.grid.addWidget( self.browse_audio_cue_button, 3,4 )
-
-        self.grid.addWidget( self.clear_button, 4,4 )
-
-        self.setLayout(self.grid)
-
-
-    def browse_image_button_clicked(self):
-        print("opening browse stimulus dialog")
-        ###file_dialog = QFileDialog(self)
-        # NOTE: the function returns a tuple, and the first element is the chosen path! second is the filters used. QUESTION why do this?
-        file_name = QFileDialog.getOpenFileName(parent = self, caption = "Browse Audio", dir = self.data_path, filter = "")[0]   
-            #QUESTION: I cannot make the filter work! I need also audio!
-
-        if len(file_name[0])>0:
-            self.picture_path = file_name
-            self.description["picture path"] = file_name
-            print("a file was selected: ", self.picture_path)
-            self.picture_name.setText( file_name.split("/")[-1] ) # updates the label
+        print("Editing stimulus {}".format(self.number))
+        
+        file_name = QFileDialog.getOpenFileName(parent = self, caption = "Browse", dir = self.data_path, filter = "")[0]   
+            
+        if len(file_name)>0:
+            self.newdescription["picture path"] = file_name
+            print("a file was selected: ", self.newdescription["picture path"])
+            self.update_info_text()
             
         else:
             print("No file was selected")
-
-    def browse_audio_button_clicked(self):
-        print("opening browse stimulus dialog")
-        ###file_dialog = QFileDialog(self)
-        # NOTE: the function returns a tuple, and the first element is the chosen path! second is the filters used. QUESTION why do this?
-        file_name = QFileDialog.getOpenFileName(parent = self, caption = "Browse Image", dir = self.data_path, filter = "")[0]   
-            #QUESTION: I cannot make the filter work! I need also audio!
-
-        if len(file_name[0])>0:
-            self.audio_path = file_name
-            self.description["audio path"] = file_name
-            print("a file was selected: ", self.audio_path)
-            self.audio_name.setText( file_name.split("/")[-1] ) # updates the label
-            
-        else:
-            print("No file was selected")
-
-    def browse_audio_cue_button_clicked(self):
+    
+    def upload_audio_button_clicked(self):
+        print("Editing stimulus {}".format(self.number))
         
-        print("opening browse audio cue dialog")
-        ###file_dialog = QFileDialog(self)
-        # NOTE: the function returns a tuple, and the first element is the chosen path! second is the filters used. QUESTION why do this?
-        file_name = QFileDialog.getOpenFileName(parent = self, caption = "Browse Audio Cue Dialog", dir = self.data_path, filter = "")[0]   
-            #QUESTION: I cannot make the filter work! I need also audio!
-
-        if len(file_name[0])>0:
-            self.audio_cue_path = file_name
-            self.description["audio cue path"] = file_name
-            print("a audio cue file was selected: ", self.audio_cue_path)
-            self.audio_cue_name.setText( file_name.split("/")[-1] ) # updates the label
+        file_name = QFileDialog.getOpenFileName(parent = self, caption = "Browse", dir = self.data_path, filter = "")[0]   
+            
+        if len(file_name)>0:
+            self.newdescription["audio path"] = file_name
+            print("a file was selected: ", self.newdescription["audio path"])
+            self.update_info_text()
             
         else:
             print("No file was selected")
+    
+    def upload_audio_cue_button_clicked(self):
+        
+        print("Editing stimulus {}".format(self.number))
+        
+        file_name = QFileDialog.getOpenFileName(parent = self, caption = "Browse", dir = self.data_path, filter = "")[0]   
+            
+        if len(file_name)>0:
+            self.newdescription["audio cue path"] = file_name
+            print("a file was selected: ", self.newdescription["audio cue path"])
+            self.update_info_text()
+            
+        else:
+            print("No file was selected")
+    
+    def clear_stimulus_data(self): # TODO!
 
-    def clear_stimulus_data(self):
-        print("clearing stimulus {} data".format(self.widget_number))
-        self.picture_name.setText("...")
-        self.audio_name.setText("...")
-        self.audio_cue_name.setText("...")
+        stimulus = self.stimuli_list[ self.list_widget.currentRow() ]
+        print("clearing stimulus {} data".format(stimulus.stimulus_number))
+
+        for key in stimulus.description.keys():
+            stimulus.description[key] = ""
+        print(f"Stimulus {stimulus.stimulus_number} now has parameters {stimulus.description}")
+        self.update_list_widget()
 
 class ExperimentSetupWindow(QWidget):
     """
     open this with self.show_experiment_setup_window() method
 
-
-    stimulas selection layout
-        select stimulus ___ : filename of stimulus : button (remove stimulus)
     """
+
     def __init__(self):
         super().__init__()
-
-        self.setWindowTitle("Experiment Type Setup")
         
-        ########self.experiment_type = "No experiment selected"
-        
-        self.SSVEP_parameters = {} # NOTE: not yet implemented!
+        self.experiment_type = ""
 
         self.accept_experiment_settings_button = QPushButton("Accept Experiment Settings")
             # signal for this goes into the widget that calls this widget self.accept_experiment_settings_button.clicked.connect(self.accept_experiment_settings)
@@ -267,7 +263,7 @@ class ExperimentSetupWindow(QWidget):
 
         self.MI_form_layout = QFormLayout()
 
-        # for practice, create a list of widgets to use in the form layout QUESTION: is there a way of putting this in an iterable element?
+        # for practicality, create a list of widgets to use in the form layout 
         self.stimulus_duration = QLineEdit("0")
         self.rest_time = QLineEdit("0")
         self.runs_per_class = QLineEdit("0") # number of runs for each image
@@ -278,23 +274,54 @@ class ExperimentSetupWindow(QWidget):
             self.MI_form_layout.addRow( key, self.settings_form_elements[key] )
 
 
-        # motion imagery stimuli: you must be able to add, remove
-        self.stimuli_layout = QVBoxLayout()
+        # stimuli layout:  you must be able to add, remove
+        stimuli_layout = QVBoxLayout()
+
+        # list of widgets label
+        list_widget_label = QLabel("All stumuli here")
+
+        # keep stimuli into a SCROLLABLE list
+        self.list_widget = QListWidget()
+        self.list_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.list_widget.currentRowChanged.connect( self.list_item_changed )
         
         # add custom widgets for browsing stimuli data, as a list
-        self.stimuli_list = [ StimulusWidget(widget_number = 0), StimulusWidget(widget_number = 1), StimulusWidget(widget_number = 2), StimulusWidget(widget_number = 3)]
+        self.s0 = Stimulus(stimulus_number = 0)
+        self.s1 = Stimulus(stimulus_number = 1)
+        self.s2 = Stimulus(stimulus_number = 2)
+        self.s3 = Stimulus(stimulus_number = 3)
+        self.stimuli_list = [ self.s0, self.s1, self.s2, self.s3]
 
-        for i in self.stimuli_list:
-            self.stimuli_layout.addWidget(i)
+        self.update_list_widget()
 
-        self.generate_MI_button = QPushButton("Generate MI sequence")
-        self.generate_MI_button.clicked.connect(self.generate_MI_sequence)
+        button_grid = QGridLayout()
+        edit_b = QPushButton("Edit selected") # edits selected stimulus
+        edit_b.clicked.connect(self.edit_stimulus)
+        clear_b = QPushButton("Clear Selected") # ...
+        button_grid.addWidget(edit_b,0,0)
+        button_grid.addWidget(clear_b,0,1)
+
+
+
+        """
+        FIXME QUESTION
+        should I use a combobox with "add picture", "add audio", add runup image", "add rest image"?
+        let's use a button with "edit stimulus" so you can edit all in a qdialog! or a qwidget.
+        
+        """
+
+
+
+        stimuli_layout.addWidget(list_widget_label)
+        stimuli_layout.addWidget( self.list_widget )
+        stimuli_layout.addLayout(button_grid)
+
+
 
 
         self.page1_layout.addLayout(self.MI_form_layout)
-        # delete this self.page1_layout.addWidget(self.audio_cue_browse_button )
-        self.page1_layout.addLayout(self.stimuli_layout)
-        self.page1_layout.addWidget(self.generate_MI_button)
+        self.page1_layout.addLayout(stimuli_layout)
 
         self.page1.setLayout(self.page1_layout)
 
@@ -317,6 +344,10 @@ class ExperimentSetupWindow(QWidget):
         layout.addLayout(self.stackedLayout)
         layout.addWidget(self.accept_experiment_settings_button)
 
+    def list_item_changed(self):
+        print("MI stimuli selection changed to stimulus {}".format( self.list_widget.currentRow() ))
+        # QUESTION: when clearing a stimulus, the index is set to the last row. why? FIXME!
+
     def switchPage(self):
         """
         switches page AND updates experiment type! 
@@ -331,68 +362,46 @@ class ExperimentSetupWindow(QWidget):
         print("Experiment selection changed: ")
         print(self.experiment_type.currentIndex())
         print(self.experiment_type.currentText())
+        self.experiment_type = self.page_combo.currentText()
 
     def restore_defaults(self):
         """QUESTION ONE DAY DO THIS"""
         pass
 
-    def generate_MI_sequence(self):
-        """
-        generates a series of motor imagery stimuli plus resting time plus audio cues
-        parameters to use
-            stimuli
-                the number of classes to show. basic case, it's 2
-            stimulus duration
-                time that a stimulus is displayed
-            runs per stimuli
-                each stimulus will be run "n" times
-            rest stimulus
-                during resting time, show something
-            rest duration
-                how long does the resting last
-            audio cue
-                ...
-        EXAMPLE
-            - 2 classes, duration in 5s, 20 times each stimulus, 1 rest image, rest time is 10s, 
-            - create a list of 40 images, shuffle, then add rest image in the middle
-            - if a stimulus is a sound, use a default black screen
+    def edit_stimulus(self):
 
-        HOW
-            experiment settings are kept in the MainWindow experiment_settings dictionary
+        stimulus = self.stimuli_list[self.list_widget.currentRow()]
 
+        dlg = EditStimulus( self.list_widget.currentRow(), stimulus )
+
+        if dlg.exec_():
+            print("Setup accepted!")
+            print("Previous info: {}".format(stimulus.description))
+            print(dlg.get_info()) # NOTE: you can store values and retrieve them when the dialog is not in its loop like this!
+            for key in dlg.newdescription.keys():
+                stimulus.description[key] = dlg.newdescription[key]
+            print("Updated info: {}".format(stimulus.description))
+
+            self.update_list_widget()
+
+        else: 
+            print("Dialog rejected!")
+
+    def update_list_widget(self):
+        self.list_widget.clear()
+        for stim in self.stimuli_list:
+            self.list_widget.addItem( self.unpack( stim ) )
+
+    def unpack(self, stimulus):
         """
+        given a StimulusWidget widget, unpacks its info into text that is printed as an element of a QListWidget
+        """
+        text = "Stimulus {}\n".format(stimulus.stimulus_number)
         
-        """ 1) GENERATING A SEQUENCE OF INDEXES """
-        print("GENERATING SEQUENCE")
-        # step 1: create a list of N elements
-            # there are k classes, k: number of stimuli
-            # each class repeats n times, n : runs per class
-            # N = k*n
-        k = len(self.stimuli_list) # already defined above. rewrite it someday
-        n = int(self.runs_per_class.text())
-        N = k*n
-        sequence = np.zeros(0)
-        for i in range(k):
-            sequence = np.append( sequence, np.ones(n)*i )
+        for key in stimulus.description.keys():
+            text = text + "\t{}\t\t{}\n".format(key,stimulus.description[key].split("/")[-1]) # QUESTION TODO should I return the full path or just the name?
 
-        """ print some information on terminal """
-        print("number of classes: ", k)  
-        print("Experiment settings:") 
-        for key in self.settings_form_elements.keys():
-            print("\t",key,"\t",self.settings_form_elements[key].text())
-        
-        for stimulus in self.stimuli_list:
-            print("Stimulus ",stimulus.widget_number)
-            print("\tpicture\t",stimulus.picture_path)
-            print("\taudio\t",stimulus.audio_path)
-
-        print("GENERATED SEQUENCE:")
-        print(sequence)
-
-        """ 2) CREATING A PLAYLIST
-        all elements have the same duration
-        some elements have audio. I will need to add audio 
-        """
+        return text
 
 
 class PatientDataWindow(QWidget):
@@ -445,14 +454,78 @@ class ApproveExperimentWindow(QWidget):
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
-        self.metadata_label = QLabel("StreamInfo complete with all metadata (can I generate timestamps already? or get a button to do so?") 
+        self.metadata_text = QTextEdit("StreamInfo complete with all metadata (can I generate timestamps already? or get a button to do so?") 
             # NOTE: text is set when main window updates the etadata. is that okay? I'll append things to the StreamInfo object there. QUESTION
         
+        self.generate_MI_button = QPushButton("Generate MI sequence")
+        self.generate_MI_button.clicked.connect(self.generate_MI_sequence)
+
         self.approve_and_run_button = QPushButton("Approve and Run")
 
 
-        self.layout.addWidget(self.metadata_label)
+        self.layout.addWidget(self.metadata_text)
         self.layout.addWidget(self.approve_and_run_button)
+
+    
+    def generate_MI_sequence(self):
+        """
+        generates a series of motor imagery stimuli plus resting time plus audio cue
+
+        parameters to use
+            stimuli
+                the number of classes to show. basic case, it's 2
+            stimulus duration
+                time that a stimulus is displayed
+            runs per stimuli
+                each stimulus will be run "n" times
+            rest stimulus
+                during resting time, show something
+            rest duration
+                how long does the resting last
+            audio cue
+                ...
+        EXAMPLE
+            - 2 classes, duration in 5s, 20 times each stimulus, 1 rest image, rest time is 10s, 
+            - create a list of 40 images, shuffle, then add rest image in the middle
+            - if a stimulus is a sound, use a default black screen
+
+        HOW
+            experiment settings are kept in the MainWindow experiment_settings dictionary
+
+        """
+        
+        """ 1) GENERATING A SEQUENCE OF INDEXES """
+        print("GENERATING SEQUENCE")
+        # step 1: create a list of N elements
+            # there are k classes, k: number of stimuli
+            # each class repeats n times, n : runs per class
+            # N = k*n
+        k = len(self.stimuli_list) # already defined above. rewrite it someday
+        n = int(self.runs_per_class.text())
+        N = k*n
+        sequence = np.zeros(0)
+        for i in range(k):
+            sequence = np.append( sequence, np.ones(n)*i )
+
+        """ print some information on terminal """
+        print("number of classes: ", k)  
+        print("Experiment settings:") 
+        for key in self.settings_form_elements.keys():
+            print("\t",key,"\t",self.settings_form_elements[key].text())
+        
+        for stimulus in self.stimuli_list:
+            for key in stimulus.description.keys():
+                print(key,"\t",stimulus.description[key])
+
+        print("GENERATED SEQUENCE:")
+        print(sequence)
+
+        """ 2) CREATING A PLAYLIST
+        all elements have the same duration
+        some elements have audio. I will need to add audio 
+        
+        """
+
 
 
 class DummyWidget(QWidget):
@@ -597,9 +670,11 @@ class MainWindow(QMainWindow):
         
 
         """LEFT LABEL WITH METADATA"""
-        self.metadata_label = QLabel("METADATA updated here")
-        #self.metadata_label.setFixedWidth(200) QUESTION: HOW TO get a decent thing here?
-        self.central_layout.addWidget(self.metadata_label)
+        self.metadata_text = QTextEdit("METADATA updated here")
+        self.metadata_text.setReadOnly(True)
+        self.metadata_text.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.metadata_text.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.central_layout.addWidget(self.metadata_text)
 
 
         """ASSIGN CENTRAL WIDGETS"""
@@ -672,13 +747,13 @@ class MainWindow(QMainWindow):
             # self.page2 is the ExperimentSetupWindow widget
                 # self.page2.stimuli_list is a list where the programmer has manually added some widgets
                     # each of the stimuli contains a path to an image or an audio or both! they are called .picture_path and .audio_path
-            for stimulus_widget in self.page2.stimuli_list: # i is a widget! get its .stimulus attribute, that holds the path!
+            for stimulus in self.page2.stimuli_list: # i is a widget! get its .stimulus attribute, that holds the path!
 
-                print("\tAdding stimulus: ",stimulus_widget.widget_number)
-                print(stimulus_widget.description)
+                print("\tAdding stimulus: ",stimulus.stimulus_number)
+                print(stimulus.description)
 
                 # addi stimulus to experiment info dictionary in MainWindow
-                self.experiment_info[ "stimulus {}".format(stimulus_widget.widget_number) ] = stimulus_widget.description 
+                self.experiment_info[ "stimulus {}".format(stimulus.stimulus_number) ] = stimulus.description 
 
         # update metadata label
         self.update_metadata() # TODO: update this function, as you changed the stimulus widget!
@@ -745,7 +820,7 @@ class MainWindow(QMainWindow):
 
     def update_metadata(self):
         """
-        this will update the label (self.metadata_label) by running through the metadata dictionaries. 
+        this will update the label (self.metadata_text) by running through the metadata dictionaries. 
         final metadata will be appended to the StreamInfo object when finally approving the experiment
         """
 
@@ -768,7 +843,7 @@ class MainWindow(QMainWindow):
                 text = text + "\t{}\n".format(key)
                 
                 for inner_key in self.experiment_info[key].keys():
-                    text = text + "\t\t{}\t\t{}\n".format(inner_key, self.experiment_info[key][inner_key].split("/")[-1] ) # QUESTION: how to shrink the widget? for now I only use the filename
+                    text = text + "\t\t{}\t\t{}\n".format(inner_key, str(self.experiment_info[key][inner_key]).split("/")[-1] )
 
             else:
                 text = text + "\t{}\t\t{}\n".format(key,self.experiment_info[key])
@@ -797,9 +872,9 @@ class MainWindow(QMainWindow):
             print("\t{}\t\t{}".format( key, self.experiemnt_info[key] ))
         """
 
-        self.metadata_label.setText(text)
+        self.metadata_text.setText(text)
 
-        # IF you want to use the label instead on the streaminfo XML format self.page4.metadata_label.setText( text )
+        # IF you want to use the label instead on the streaminfo XML format self.page4.metadata_text.setText( text )
 
 
 if __name__ == '__main__':
@@ -808,4 +883,17 @@ if __name__ == '__main__':
     main_win = MainWindow()
     main_win.show()
     sys.exit(app.exec())
+
+
+
+
+
+
+
+
+
+
+
+
+
 
