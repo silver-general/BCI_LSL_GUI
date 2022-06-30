@@ -715,7 +715,10 @@ class ExperimentRunDialog(QDialog):
         # save timestamps somewhere
         with open(self.project_folder+"/timestamps.txt",'w',encoding = 'utf-8') as file:
             #print("writing timestamps to {}".format(self.project_folder))
+            file.write("\nTimestamps")
             file.write( str(self.timestamps) )
+            file.write("Stream Info:\n")
+            file.write(self.stream_info.as_xml())
         self.accept()
         
     def play_next(self):
@@ -929,7 +932,7 @@ class MainWindow(QMainWindow):
         self.patient_data_button = QPushButton("Insert Patient Data")
         self.patient_data_button.clicked.connect(self.show_patient_data_window)
 
-        self.view_metadata_and_run_experiment_button = QPushButton("View metadata and approve experiment")
+        self.view_metadata_and_run_experiment_button = QPushButton("Review and Run experiment")
         self.view_metadata_and_run_experiment_button.clicked.connect(self.show_approve_experiment_window)
         
 
